@@ -3,36 +3,42 @@ import { motion, useScroll, useTransform, useSpring, AnimatePresence } from 'fra
 import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
-// SafeIcon component for Lucide icons
-const iconMap = {}
-
+// SafeIcon component for Lucide icons - Simplified for performance
 const SafeIcon = ({ name, size = 24, className = '', ...props }) => {
-  const [Icon, setIcon] = useState(null)
+  const IconRef = useRef(null)
+  const [isLoaded, setIsLoaded] = useState(false)
   
   useEffect(() => {
+    let mounted = true
+    
     const loadIcon = async () => {
-      if (iconMap[name]) {
-        setIcon(() => iconMap[name])
-        return
-      }
       try {
         const lucide = await import('lucide-react')
         const iconName = name.split('-').map(part => 
           part.charAt(0).toUpperCase() + part.slice(1)
         ).join('')
-        const IconComponent = lucide[iconName] || lucide.HelpCircle
-        iconMap[name] = IconComponent
-        setIcon(() => IconComponent)
+        
+        if (mounted) {
+          IconRef.current = lucide[iconName] || lucide.HelpCircle
+          setIsLoaded(true)
+        }
       } catch {
-        const { HelpCircle } = await import('lucide-react')
-        setIcon(() => HelpCircle)
+        if (mounted) {
+          IconRef.current = null
+          setIsLoaded(true)
+        }
       }
     }
+    
     loadIcon()
+    return () => { mounted = false }
   }, [name])
   
-  if (!Icon) return <div style={{ width: size, height: size }} className={className} />
+  if (!isLoaded || !IconRef.current) {
+    return <div style={{ width: size, height: size }} className={className} />
+  }
   
+  const Icon = IconRef.current
   return <Icon size={size} className={className} {...props} />
 }
 
@@ -41,20 +47,24 @@ function cn(...inputs) {
   return twMerge(clsx(inputs))
 }
 
-// Custom Cursor Component
+// Custom Cursor Component - Fixed for mobile
 const CustomCursor = () => {
   const [isHovering, setIsHovering] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
+  const [isMobile, setIsMobile] = useState(true)
   
   const cursorX = useSpring(0, { stiffness: 500, damping: 28 })
   const cursorY = useSpring(0, { stiffness: 500, damping: 28 })
   
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.matchMedia('(pointer: coarse)').matches)
+      const hasCoarse = window.matchMedia('(pointer: coarse)').matches
+      const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+      setIsMobile(hasCoarse || isTouch)
     }
+    
     checkMobile()
     window.addEventListener('resize', checkMobile)
+    
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
   
@@ -76,9 +86,9 @@ const CustomCursor = () => {
       setIsHovering(false)
     }
     
-    window.addEventListener('mousemove', moveCursor)
-    document.addEventListener('mouseover', handleMouseOver)
-    document.addEventListener('mouseout', handleMouseOut)
+    window.addEventListener('mousemove', moveCursor, { passive: true })
+    document.addEventListener('mouseover', handleMouseOver, { passive: true })
+    document.addEventListener('mouseout', handleMouseOut, { passive: true })
     
     return () => {
       window.removeEventListener('mousemove', moveCursor)
@@ -127,8 +137,9 @@ const Header = ({ isInverted }) => {
       
       <button 
         onClick={() => setIsMenuOpen(!isMenuOpen)}
-        className="w-12 h-12 flex items-center justify-center"
+        className="w-12 h-12 flex items-center justify-center touch-manipulation"
         data-cursor-hover
+        style={{ touchAction: 'manipulation' }}
       >
         <SafeIcon name={isMenuOpen ? "x" : "menu"} size={24} />
       </button>
@@ -152,7 +163,14 @@ const Header = ({ isInverted }) => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.1 }}
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setIsMenuOpen(false)
+                    const element = document.getElementById(item.toLowerCase())
+                    if (element) {
+                      element.scrollIntoView({ behavior: 'smooth' })
+                    }
+                  }}
                   className="font-black text-5xl md:text-7xl tracking-tighter hover:opacity-50 transition-opacity"
                   data-cursor-hover
                 >
@@ -170,7 +188,7 @@ const Header = ({ isInverted }) => {
 // Hero Section
 const Hero = () => {
   return (
-    <section className="relative h-screen bg-black text-white flex flex-col items-center justify-center px-6">
+    <section className="relative h-screen bg-black text-white flex flex-col items-center justify-center px-6 overflow-hidden">
       <motion.h1 
         initial={{ opacity: 0, y: 60 }}
         animate={{ opacity: 1, y: 0 }}
@@ -216,7 +234,7 @@ const ImageReveal = ({ src, alt, className, delay = 0 }) => {
           observer.disconnect()
         }
       },
-      { threshold: 0.2 }
+      { threshold: 0.2, rootMargin: '0px 0px -10% 0px' }
     )
     
     if (ref.current) observer.observe(ref.current)
@@ -236,6 +254,7 @@ const ImageReveal = ({ src, alt, className, delay = 0 }) => {
           alt={alt} 
           loading="lazy"
           className="w-full h-full object-cover"
+          style={{ willChange: 'transform' }}
         />
       </motion.div>
       
@@ -291,7 +310,7 @@ const ProjectsGallery = () => {
   ]
   
   return (
-    <section id="projects" className="bg-white text-black py-[20vh] px-6 md:px-12">
+    <section id="projects" className="bg-white text-black py-[20vh] px-6 md:px-12 overflow-hidden">
       <div className="max-w-[1800px] mx-auto space-y-[15vh]">
         <motion.div
           initial={{ opacity: 0 }}
@@ -449,6 +468,7 @@ const Services = () => {
                       src={service.image} 
                       alt={service.title}
                       className="w-full h-full object-cover grayscale"
+                      loading="lazy"
                     />
                   </motion.div>
                 )}
@@ -465,7 +485,7 @@ const Services = () => {
 // Footer Section
 const Footer = () => {
   return (
-    <footer id="contact" className="bg-white text-black py-[20vh] px-6 md:px-12 pb-[120px]">
+    <footer id="contact" className="bg-white text-black py-[20vh] px-6 md:px-12 telegram-safe-bottom">
       <div className="max-w-[1800px] mx-auto">
         <motion.div
           initial={{ opacity: 0 }}
@@ -520,35 +540,43 @@ const Footer = () => {
 
 // Main App Component
 function App() {
-  const { scrollYProgress } = useScroll()
   const [isInverted, setIsInverted] = useState(false)
   
   // Track scroll position for color inversion
   useEffect(() => {
+    let ticking = false
+    
     const handleScroll = () => {
-      const scrollY = window.scrollY
-      const viewportHeight = window.innerHeight
-      
-      // Invert based on which section is dominant
-      // Hero (black) = 0-100vh, Projects (white) = 100vh-300vh, Services (black) = 300vh-400vh, Footer (white) = 400vh+
-      if ((scrollY > viewportHeight * 0.8 && scrollY < viewportHeight * 3) || 
-          scrollY > viewportHeight * 4) {
-        setIsInverted(true)
-      } else {
-        setIsInverted(false)
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const scrollY = window.scrollY
+          const viewportHeight = window.innerHeight
+          
+          // Invert based on which section is dominant
+          if ((scrollY > viewportHeight * 0.8 && scrollY < viewportHeight * 3) || 
+              scrollY > viewportHeight * 4) {
+            setIsInverted(true)
+          } else {
+            setIsInverted(false)
+          }
+          ticking = false
+        })
+        ticking = true
       }
     }
     
     window.addEventListener('scroll', handleScroll, { passive: true })
+    handleScroll() // Check initial position
+    
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
   
   return (
-    <div className="relative">
+    <div className="relative overflow-x-hidden">
       <CustomCursor />
       <Header isInverted={isInverted} />
       
-      <main>
+      <main className="overflow-x-hidden">
         <Hero />
         <ProjectsGallery />
         <Services />
