@@ -1,0 +1,40 @@
+@import "./globals.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  cursor: none;
+}
+
+@media (pointer: coarse) {
+  * {
+    cursor: auto;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  overflow-x: hidden;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Hide scrollbar but keep functionality */
+body::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
+/* Selection styling */
+::selection {
+  background: #000000;
+  color: #FFFFFF;
+}
+
+.inverted ::selection {
+  background: #FFFFFF;
+  color: #000000;
+}
