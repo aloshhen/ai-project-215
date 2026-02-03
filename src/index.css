@@ -3,29 +3,45 @@
 @tailwind components;
 @tailwind utilities;
 
-* {
-  cursor: none;
+/* CRITICAL FIX: Only hide cursor on desktop devices with fine pointer */
+@media (pointer: fine) {
+  * {
+    cursor: none !important;
+  }
 }
 
+/* On touch devices, ensure normal cursor */
 @media (pointer: coarse) {
   * {
-    cursor: auto;
+    cursor: auto !important;
   }
 }
 
 html {
   scroll-behavior: smooth;
+  /* CRITICAL: Remove overflow-x: hidden from html - it breaks scrolling */
+  overflow-y: scroll;
+  overflow-x: hidden;
 }
 
 body {
+  /* CRITICAL: Only apply overflow-x: hidden to body, not both html and body */
   overflow-x: hidden;
+  overflow-y: auto;
   font-family: 'Inter', sans-serif;
+  -webkit-overflow-scrolling: touch;
+  min-height: 100vh;
 }
 
 /* Hide scrollbar but keep functionality */
 body::-webkit-scrollbar {
   width: 0px;
   background: transparent;
+}
+
+/* Firefox */
+body {
+  scrollbar-width: none;
 }
 
 /* Selection styling */
