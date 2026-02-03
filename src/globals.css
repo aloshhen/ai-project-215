@@ -5,10 +5,8 @@
 
 /* Root-level mobile optimization */
 html {
-  overflow-x: hidden;
   max-width: 100vw;
-  position: relative;
-  /* Prevent text size adjustment on mobile */
+  /* CRITICAL: Removed position: relative and overflow-x: hidden combo that breaks scroll */
   -webkit-text-size-adjust: 100%;
   -moz-text-size-adjust: 100%;
   -ms-text-size-adjust: 100%;
@@ -16,7 +14,6 @@ html {
 }
 
 body {
-  overflow-x: hidden;
   max-width: 100vw;
   position: relative;
   /* Telegram Safe Areas - prevents content from being hidden by Telegram UI */
@@ -36,7 +33,6 @@ body {
   max-width: 100vw;
   overflow-x: hidden;
   position: relative;
-  /* Responsive padding */
   padding-left: clamp(16px, 4vw, 24px);
   padding-right: clamp(16px, 4vw, 24px);
 }
@@ -47,6 +43,7 @@ video,
 iframe {
   max-width: 100%;
   height: auto;
+  display: block;
 }
 
 /* Prevent text overflow */
@@ -137,7 +134,8 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Prevent pull-to-refresh on mobile */
+/* CRITICAL FIX: Allow vertical scrolling, prevent only pull-to-refresh issues */
 body {
-  overscroll-behavior-y: contain;
+  overscroll-behavior-y: auto;
+  touch-action: pan-y;
 }
